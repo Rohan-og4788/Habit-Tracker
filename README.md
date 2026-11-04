@@ -283,7 +283,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Authenticated E2E tests are skipped unless `E2E_EMAIL` and `E2E_PASSWORD` are set.
+Current result: **6 passed, 1 skipped** (the authenticated flow is skipped unless `E2E_EMAIL` and `E2E_PASSWORD` are set).
 
 ---
 
