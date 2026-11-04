@@ -1,0 +1,42 @@
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server";
+import { validateSession, readSessionCookie } from "@/lib/session";
+import { createFocusSession, listFocusSessions } from "@/services/focus.service";
+import dbConnect from "@/lib/database";
+
+async function getUserId(req: Request): Promise<string | null> {
+  const token = readSessionCookie(req);
+  if (!token) return null;
+  const session = await validateSession(token);
+  return session ? String(session.user._id) : null;
+}
+
+export async function GET(req: Request) {
+  try {
+    await dbConnect();
+    const userId = await getUserId(req);
+    if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const sessions = await listFocusSessions(userId);
+    return NextResponse.json({ sessions });
+  } catch (err: any) {
+    return NextResponse.json({ error: "Failed to load sessions." }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    await dbConnect();
+    const userId = await getUserId(req);
+    if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const body = await req.json();
+    const session = await createFocusSession({
+      userId,
+      habitId: body.habitId || undefined,
+      plannedMinutes: body.plannedMinutes || 25,
+      startedAt: new Date(body.startedAt || Date.now()),
+    });
+    return NextResponse.json(session, { status: 201 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to start session." }, { status: 500 });
+  }
+}
