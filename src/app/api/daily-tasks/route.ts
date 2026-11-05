@@ -24,11 +24,13 @@ export async function POST(req: Request) {
     if (auth instanceof NextResponse) return auth;
     const body = await req.json();
     if (!body.title?.trim()) return badRequest("Title is required.");
+    const date = body.date || localDateString(new Date(), auth.user.timezone || "UTC");
+    if (!isValidLocalDate(date)) return badRequest("Invalid date.");
     const task = await createDailyTask({
       userId: auth.userId,
       title: body.title,
       description: body.description,
-      date: body.date || localDateString(new Date(), auth.user.timezone || "UTC"),
+      date,
       dueTime: body.dueTime,
       priority: body.priority,
       habitId: body.habitId || undefined,

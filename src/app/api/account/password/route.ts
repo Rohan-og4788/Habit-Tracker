@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { requireAuth, badRequest, serverError } from "@/lib/api";
+import { requireAuth, badRequest, notFound, serverError } from "@/lib/api";
 import { changePassword } from "@/services/account.service";
 import { changePasswordSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
@@ -23,6 +23,9 @@ export async function POST(req: Request) {
     await changePassword(auth.userId, parsed.data.currentPassword, parsed.data.newPassword);
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (/current password is incorrect/i.test(message)) return badRequest(message);
+    if (/user not found/i.test(message)) return notFound(message);
     return serverError(err, "Failed to change password.");
   }
 }

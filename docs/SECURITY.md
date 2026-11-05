@@ -123,7 +123,7 @@ These guarantees are exercised against a real MongoDB replica set by `tests/inte
 
 - **Zod schemas** validate auth payloads, habits, logs, goals, journal entries, profile updates, contact messages and password changes.
 - **Mongoose schema validation** provides a second layer for enums, required fields, max lengths and numeric ranges.
-- **Mass-assignment protection:** update handlers use explicit allow-lists (e.g. `src/app/api/settings/route.ts`, `src/app/api/notifications/preferences/route.ts`, `src/app/api/goals/[id]/route.ts`) rather than spreading the request body into `$set`.
+- **Mass-assignment protection:** update handlers use explicit allow-lists (e.g. `src/app/api/settings/route.ts`, `src/app/api/notifications/route.ts`, `src/app/api/notifications/preferences/route.ts`, `src/app/api/goals/[id]/route.ts`) rather than spreading the request body into `$set`. The notification route ignores fields such as `userId` even if supplied.
 - **Date validation:** `isValidLocalDate` rejects malformed strings and impossible dates (e.g. `2024-02-30`).
 - **Body size:** Next.js server actions are capped at 2 MB; route handlers rely on platform limits. No route accepts file uploads in this build.
 

@@ -274,12 +274,13 @@ See [`.env.example`](.env.example) for inline comments.
 npm test
 ```
 
-Current result: **45 tests across 4 files, all passing** (29 unit + 16 integration).
+Current result: **55 tests across 5 files, all passing** (29 unit + 26 integration).
 
 - `tests/unit/streak.test.ts` — local-date validation, timezone conversion, DST-safe day bounds, scheduling rules, progress calculation.
 - `tests/unit/validations.test.ts` — Zod schemas for registration, login, habits, logs and journal.
 - `tests/integration/database.test.ts` — runs against a real, disposable MongoDB **replica set** (`mongodb-memory-server`). Covers habit creation with schedule versions, log upserts, the unique `{userId, habitId, localDate}` index, transaction commits, future/unscheduled-day rejection, cross-user isolation (IDOR), streak recomputation and analytics.
 - `tests/integration/api.test.ts` — exercises the real route handlers with real session/CSRF cookies: register, login, logout, `/api/auth/me`, unauthenticated 401s, the free-tier limit, log upsert/read/delete, `400` responses for future/unscheduled days, habit IDOR (`404` on GET/PATCH/DELETE), and analytics.
+- `tests/integration/features.test.ts` — full feature coverage through the API: goals (progress/completion/IDOR), journal upserts, focus sessions, daily tasks (reorder/validation), challenges (idempotent check-ins/window checks), settings, notification allow-listing + push gating, JSON/CSV export, profile/password/session rotation, cascading account deletion, achievements, reports, subscription-disabled and AI-local fallback.
 
 Run only one layer when iterating:
 
@@ -321,7 +322,7 @@ Current result: **6 passed, 1 skipped** (the authenticated flow is skipped unles
 - Goals, journal, focus sessions, daily planner, challenges.
 - Settings, profile, notification preferences, data export, account deletion.
 - PWA manifest/service worker, SEO files, error/404/loading pages.
-- Unit tests and Playwright public-page tests.
+- Unit tests, MongoDB-backed integration tests (database, auth/API and full feature coverage) and Playwright public-page tests.
 
 ### Implemented but disabled without credentials
 

@@ -1,7 +1,14 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { requireAuth, serverError } from "@/lib/api";
+import { requireAuth, badRequest, notFound, serverError } from "@/lib/api";
 import { updateChallenge, deleteChallenge } from "@/services/challenge.service";
+
+function challengeError(err: unknown, fallback: string) {
+  const message = err instanceof Error ? err.message : "";
+  if (/not found/i.test(message)) return notFound(message);
+  if (/must be|required|invalid/i.test(message)) return badRequest(message);
+  return serverError(err, fallback);
+}
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -11,10 +18,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const updates: any = { ...body };
     if (body.startDate) updates.startDate = new Date(body.startDate);
     if (body.endDate) updates.endDate = new Date(body.endDate);
+    if (updates.startDate && Number.isNaN(updates.startDate.getTime())) {
+      return badRequest("Invalid start date.");
+    }
+    if (updates.endDate && Number.isNaN(updates.endDate.getTime())) {
+      return badRequest("Invalid end date.");
+    }
     const challenge = await updateChallenge(params.id, auth.userId, updates);
     return NextResponse.json(challenge);
   } catch (err) {
-    return serverError(err, "Failed to update challenge.");
+    return challengeError(err, "Failed to update challenge.");
   }
 }
 
@@ -25,6 +38,6 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     await deleteChallenge(params.id, auth.userId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return serverError(err, "Failed to delete challenge.");
+    return challengeError(err, "Failed to delete challenge.");
   }
 }

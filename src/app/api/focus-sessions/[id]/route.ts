@@ -9,6 +9,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (auth instanceof NextResponse) return auth;
 
     const body = await req.json();
+    const hasUpdate =
+      (typeof body.actualMinutes === "number" && body.actualMinutes >= 0) ||
+      typeof body.completed === "boolean" ||
+      typeof body.interrupted === "boolean" ||
+      Boolean(body.endedAt);
+    if (!hasUpdate) return badRequest("No valid updates supplied.");
+
     const updates: any = {};
     if (typeof body.actualMinutes === "number" && body.actualMinutes >= 0) {
       updates.actualMinutes = Math.round(body.actualMinutes);
@@ -16,8 +23,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (typeof body.completed === "boolean") updates.completed = body.completed;
     if (typeof body.interrupted === "boolean") updates.interrupted = body.interrupted;
     updates.endedAt = body.endedAt ? new Date(body.endedAt) : new Date();
-
-    if (Object.keys(updates).length === 0) return badRequest("No valid updates supplied.");
+    if (Number.isNaN(updates.endedAt.getTime())) return badRequest("Invalid endedAt.");
 
     const session = await updateFocusSession(params.id, auth.userId, updates);
     if (!session) return notFound("Focus session not found.");

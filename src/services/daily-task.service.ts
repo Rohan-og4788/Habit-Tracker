@@ -42,6 +42,9 @@ export async function updateDailyTask(
   await dbConnect();
   const task = await DailyTask.findOne({ _id: taskId, userId });
   if (!task) throw new Error("Task not found");
+  if (updates.date !== undefined && !isValidLocalDate(updates.date)) {
+    throw new Error("Invalid date");
+  }
 
   const allowed = [
     "title",

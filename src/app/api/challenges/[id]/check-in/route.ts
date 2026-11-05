@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { requireAuth, badRequest, serverError } from "@/lib/api";
+import { requireAuth, badRequest, notFound, serverError } from "@/lib/api";
 import { checkInChallenge } from "@/services/challenge.service";
 import { localDateString } from "@/services/streak.service";
 
@@ -23,6 +23,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     );
     return NextResponse.json(progress, { status: 201 });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (/not found/i.test(message)) return notFound(message);
+    if (/invalid date|outside the challenge/i.test(message)) return badRequest(message);
     return serverError(err, "Failed to check in.");
   }
 }

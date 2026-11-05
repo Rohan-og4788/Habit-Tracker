@@ -475,7 +475,7 @@ Requires session.
 { "habitId": "...", "plannedMinutes": 25, "startedAt": "2024-06-15T09:00:00.000Z" }
 ```
 
-**201** — the session.
+**201** - the session. **400** if `plannedMinutes` is not between 1 and 1440, or `startedAt` is not a valid date.
 
 ### `PATCH /api/focus-sessions/[id]`
 
@@ -485,9 +485,11 @@ Requires session.
 { "actualMinutes": 25, "completed": true, "interrupted": false, "endedAt": "2024-06-15T09:25:00.000Z" }
 ```
 
+**200** - the updated session. **400** if no valid update field is supplied or `endedAt` is invalid. **404** if the session does not belong to the caller.
+
 ### `DELETE /api/focus-sessions/[id]`
 
-Requires session. **200** `{ "ok": true }`.
+Requires session. **200** `{ "ok": true }`. **404** if the session does not exist or belongs to another user.
 
 ---
 
@@ -514,7 +516,7 @@ Requires session.
 }
 ```
 
-**201** — the task.
+**201** - the task. **400** if the title is missing or `date` is not a valid `YYYY-MM-DD` date.
 
 ### `PATCH /api/daily-tasks`
 
@@ -528,11 +530,11 @@ Requires session. Reorders tasks:
 
 ### `PATCH /api/daily-tasks/[id]`
 
-Requires session. Partial update (title, description, dueTime, priority, status, time blocks). **200** task.
+Requires session. Partial update (title, description, dueTime, priority, status, time blocks). **200** task. **400** if `date` is invalid; **404** if the task does not exist or belongs to another user.
 
 ### `DELETE /api/daily-tasks/[id]`
 
-Requires session. **200** `{ "ok": true }`.
+Requires session. **200** `{ "ok": true }`. **404** if the task does not exist or belongs to another user.
 
 ---
 
@@ -562,11 +564,11 @@ Requires session.
 
 ### `PATCH /api/challenges/[id]`
 
-Requires session. Partial update. **200** challenge.
+Requires session. Partial update. **200** challenge. **400** for invalid dates; **404** if the challenge does not exist or belongs to another user.
 
 ### `DELETE /api/challenges/[id]`
 
-Requires session. **200** `{ "ok": true }`.
+Requires session. **200** `{ "ok": true }`. **404** if the challenge does not exist or belongs to another user.
 
 ### `POST /api/challenges/[id]/check-in`
 
@@ -576,7 +578,7 @@ Requires session.
 { "localDate": "2024-06-15", "completed": true, "value": 1 }
 ```
 
-`localDate` defaults to today in the account timezone. **201** — the progress document (upserted per day).
+`localDate` defaults to today in the account timezone. **201** — the progress document (upserted per day, so repeat check-ins update rather than duplicate). **400** if the date is invalid or outside the challenge window; **404** if the challenge does not exist or belongs to another user.
 
 ---
 
@@ -606,7 +608,7 @@ Requires session. Returns notification preferences (creating defaults if needed)
 
 ### `PATCH /api/notifications`
 
-Requires session. Partial preference update. Accepts the same fields as `/api/notifications/preferences`.
+Requires session. Partial preference update using an explicit allow-list (the same fields as `/api/notifications/preferences`). Unknown or privileged fields such as `userId` are ignored. **400** if no recognised field is supplied.
 
 ### `POST /api/notifications`
 
@@ -616,7 +618,7 @@ Requires session. Registers a browser push subscription:
 { "endpoint": "https://...", "keys": { "p256dh": "...", "auth": "..." } }
 ```
 
-Only meaningful when VAPID keys are configured. **200** `{ "ok": true }`.
+Only meaningful when VAPID keys are configured. **200** `{ "ok": true }`. **503** when VAPID keys are absent (the integration fails closed rather than pretending to subscribe). **400** for a malformed subscription.
 
 ### `GET /api/notifications/preferences`
 
