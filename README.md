@@ -2,7 +2,7 @@
 
 HabitForge is a production-ready habit-tracking SaaS built with Next.js 14 (App Router), TypeScript, MongoDB/Mongoose, Tailwind CSS and shadcn-style UI components. It replaces the original static `localStorage` prototype with real authentication, a database-backed API, per-user authorization and working implementations of every advertised feature.
 
-> **Current status:** the codebase builds cleanly and all unit, integration and public e2e tests pass. Running the app requires a MongoDB connection string (see [Quick start](#quick-start)). External integrations (email, push, AI, Stripe) are optional and fail closed with explicit setup messages when their credentials are absent — they never fake success.
+> **Current status:** the codebase builds cleanly and all unit, integration and e2e tests pass, including the authenticated sign-in → dashboard flow. Running the app requires a MongoDB connection string (see [Quick start](#quick-start)). External integrations (email, push, AI, Stripe) are optional and fail closed with explicit setup messages when their credentials are absent — they never fake success.
 
 ---
 
@@ -292,14 +292,16 @@ npm run test:integration   # spins up an in-memory replica set
 
 The first integration run downloads a MongoDB binary (cached afterwards by `mongodb-memory-server`); no external database or credentials are needed.
 
-E2E (public pages and 404) runs against a dev server:
+E2E runs against a dev server:
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-Current result: **6 passed, 1 skipped** (the authenticated flow is skipped unless `E2E_EMAIL` and `E2E_PASSWORD` are set).
+The suite covers the public marketing pages, the 404 page and — when `E2E_EMAIL` and `E2E_PASSWORD` point at an account in the target database (for example the seeded demo user) — the full sign-in → dashboard flow.
+
+Current result: **7 passed** with credentials set (6 public + 1 authenticated); **6 passed, 1 skipped** without them.
 
 ---
 

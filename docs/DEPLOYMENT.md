@@ -277,6 +277,20 @@ Run through this once after the first deployment:
 - [ ] If Resend is configured: register with a real address and confirm the verification email arrives.
 - [ ] If VAPID is configured: enable browser push and confirm the browser prompt appears.
 - [ ] If Stripe is **not** configured: the subscription page explains billing is unavailable.
+- [ ] Run `POST /api/cron/reminders` with `Authorization: Bearer $CRON_SECRET`; the in-app inbox on `/dashboard/notifications` lists the created reminders.
+
+### Automated checks against a deployment
+
+Point the Playwright suite at a staging URL and a dedicated test account (never your own data — the suite signs in and exercises the dashboard):
+
+```bash
+E2E_BASE_URL=https://staging.yourdomain.com \
+E2E_EMAIL=staging-test@example.com \
+E2E_PASSWORD=... \
+npx playwright test
+```
+
+With `E2E_BASE_URL` set, Playwright skips starting a local dev server and runs all 7 tests (6 public + the authenticated sign-in → dashboard flow) against the target.
 
 ---
 
