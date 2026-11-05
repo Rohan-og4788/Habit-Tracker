@@ -638,6 +638,33 @@ Requires session.
 
 When push is not configured: `{ "configured": false, "publicKey": "" }`.
 
+### `GET /api/notifications/inbox`
+
+Requires session. Returns the caller's most recent in-app notifications plus an unread count:
+
+```json
+{
+  "notifications": [
+    { "_id": "...", "type": "habit_reminder", "title": "Time for Morning walk", "body": "...", "status": "sent", "readAt": null, "createdAt": "..." }
+  ],
+  "unreadCount": 3
+}
+```
+
+Query: `limit` (1-100, default 20), `unreadOnly=true` to return only unread items. **400** for an invalid `limit`. Always scoped to the authenticated user.
+
+### `PATCH /api/notifications/inbox/[id]`
+
+Requires session. Body `{ "read": true | false }` (defaults to `true`). **200** `{ "notification": {...} }`. **400** for a malformed id; **404** if the notification does not exist or belongs to another user.
+
+### `POST /api/notifications/inbox/read-all`
+
+Requires session. Marks every unread notification of the caller as read. **200** `{ "modified": 3 }`.
+
+### `POST /api/cron/reminders`
+
+Creates due in-app reminders (one per habit per local day, guarded by an idempotency key). Protected by `CRON_SECRET`: **503** with setup instructions when the secret is unset, **401** when the bearer token is wrong, **200** `{ "ok": true, "created": ..., "emailed": ..., "skipped": ... }` otherwise. See the [deployment guide](DEPLOYMENT.md) for the Vercel cron configuration.
+
 ---
 
 ## Settings
@@ -801,6 +828,9 @@ No payment is ever treated as successful without signature verification and a re
 | POST | `/api/challenges/[id]/check-in` |
 | GET | `/api/achievements` |
 | GET, POST, PATCH | `/api/notifications` |
+| GET | `/api/notifications/inbox` |
+| POST | `/api/notifications/inbox/read-all` |
+| PATCH | `/api/notifications/inbox/[id]` |
 | GET, PATCH | `/api/notifications/preferences` |
 | GET | `/api/notifications/push-key` |
 | GET, PATCH | `/api/settings` |

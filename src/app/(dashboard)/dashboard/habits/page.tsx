@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { listHabits } from "@/services/habit.service";
 import dbConnect from "@/lib/database";
 import { validateSession } from "@/lib/session";
@@ -15,6 +16,9 @@ export default async function MyHabitsPage() {
     const session = await validateSession(token);
     if (session) userId = String(session.user._id);
   }
+  // Defense in depth: never query with an empty userId (would throw a cast
+  // error); redirect to login instead.
+  if (!userId) redirect("/auth/login");
 
   const { items, total } = await listHabits({ userId, limit: 200 });
 

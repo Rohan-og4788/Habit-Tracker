@@ -67,7 +67,7 @@ All of the following are backed by real database reads/writes and are scoped to 
 
 ### Notifications
 - Notification preferences (channels, reminders, quiet hours, report cadence).
-- In-app notifications and a notification list API.
+- In-app notification inbox: the reminder cron writes notifications, and the notifications page lists them with unread counts, single-item "mark read" and "mark all as read" (all scoped to the owner).
 - Browser push registration only when VAPID keys are configured; otherwise the UI shows a setup message.
 - Hourly reminder cron endpoint protected by `CRON_SECRET`.
 
@@ -274,13 +274,13 @@ See [`.env.example`](.env.example) for inline comments.
 npm test
 ```
 
-Current result: **58 tests across 6 files, all passing** (29 unit + 29 integration).
+Current result: **59 tests across 6 files, all passing** (29 unit + 30 integration).
 
 - `tests/unit/streak.test.ts` — local-date validation, timezone conversion, DST-safe day bounds, scheduling rules, progress calculation.
 - `tests/unit/validations.test.ts` — Zod schemas for registration, login, habits, logs and journal.
 - `tests/integration/database.test.ts` — runs against a real, disposable MongoDB **replica set** (`mongodb-memory-server`). Covers habit creation with schedule versions, log upserts, the unique `{userId, habitId, localDate}` index, transaction commits, future/unscheduled-day rejection, cross-user isolation (IDOR), streak recomputation and analytics.
 - `tests/integration/api.test.ts` — exercises the real route handlers with real session/CSRF cookies: register, login, logout, `/api/auth/me`, unauthenticated 401s, the free-tier limit, log upsert/read/delete, `400` responses for future/unscheduled days, habit IDOR (`404` on GET/PATCH/DELETE), and analytics.
-- `tests/integration/features.test.ts` - full feature coverage through the API: goals (progress/completion/IDOR), journal upserts, focus sessions, daily tasks (reorder/validation), challenges (idempotent check-ins/window checks), settings, notification allow-listing + push gating, JSON/CSV export, profile/password/session rotation, cascading account deletion, achievements, reports, subscription-disabled and AI-local fallback.
+- `tests/integration/features.test.ts` - full feature coverage through the API: goals (progress/completion/IDOR), journal upserts, focus sessions, daily tasks (reorder/validation), challenges (idempotent check-ins/window checks), settings, notification allow-listing + push gating, the reminder cron (503/401 gating) and in-app notification inbox (list, read state, IDOR), JSON/CSV export, profile/password/session rotation, cascading account deletion, achievements, reports, subscription-disabled and AI-local fallback.
 - `tests/integration/seed.test.ts` - runs `scripts/seed.mjs` as a real child process against an in-memory replica set, signs in as the seeded demo account, reads back the seeded data through the API and proves the seeder is idempotent.
 
 Run only one layer when iterating:

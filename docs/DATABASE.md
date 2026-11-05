@@ -326,11 +326,12 @@ Goals auto-complete when `currentProgress >= targetValue`.
 | `status` | String | `pending` \| `sent` \| `delivered` \| `failed`. |
 | `scheduledAt` | Date | Required, indexed. |
 | `sentAt`, `deliveredAt` | Date | — |
+| `readAt` | Date \| null | In-app inbox read state; `null` = unread. |
 | `failureReason` | String | Max 1000. |
 | `relatedHabitId`, `relatedGoalId` | ObjectId | Optional. |
 | `idempotencyKey` | String | Unique, sparse — prevents duplicate sends. |
 
-**Indexes:** `{ userId, scheduledAt, status }`, `{ userId, status }`, unique sparse `idempotencyKey`.
+**Indexes:** `{ userId, scheduledAt, status }`, `{ userId, status }`, `{ userId, readAt, createdAt }`, unique sparse `idempotencyKey`.
 
 ---
 

@@ -30,6 +30,7 @@ const notificationSchema = new Schema(
     scheduledAt: { type: Date, required: true, index: true },
     sentAt: { type: Date },
     deliveredAt: { type: Date },
+    readAt: { type: Date, default: null },
     failureReason: { type: String, maxlength: 1000 },
     relatedHabitId: { type: Schema.Types.ObjectId, ref: "Habit" },
     relatedGoalId: { type: Schema.Types.ObjectId, ref: "Goal" },
@@ -40,6 +41,7 @@ const notificationSchema = new Schema(
 
 notificationSchema.index({ userId: 1, scheduledAt: 1, status: 1 });
 notificationSchema.index({ userId: 1, status: 1 });
+notificationSchema.index({ userId: 1, readAt: 1, createdAt: -1 });
 
 export type INotification = InferSchemaType<typeof notificationSchema>;
 

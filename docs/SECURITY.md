@@ -115,7 +115,7 @@ The `(dashboard)` layout is a server component that reads `hf_session`, validate
 
 This prevents future completions, unscheduled-day completions and duplicate logs even under concurrent requests.
 
-These guarantees are exercised against a real MongoDB replica set by `tests/integration/database.test.ts`, including a cross-user IDOR check (`getHabit`, log writes and log deletion all reject a non-owner) and a direct duplicate-key insert that must fail with `11000`. `tests/integration/api.test.ts` repeats the isolation checks through the actual HTTP route handlers with real session cookies.
+These guarantees are exercised against a real MongoDB replica set by `tests/integration/database.test.ts`, including a cross-user IDOR check (`getHabit`, log writes and log deletion all reject a non-owner) and a direct duplicate-key insert that must fail with `11000`. `tests/integration/api.test.ts` repeats the isolation checks through the actual HTTP route handlers with real session cookies, and `tests/integration/features.test.ts` covers the notification inbox (a stranger attempting to mark another user's notification read receives `404`).
 
 ---
 

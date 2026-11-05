@@ -10,6 +10,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
+  // A cold `next dev` compiles routes on first hit; give tests headroom so a
+  // fresh .next does not turn compilation time into a test timeout.
+  timeout: 60_000,
   use: {
     baseURL,
     trace: "on-first-retry",

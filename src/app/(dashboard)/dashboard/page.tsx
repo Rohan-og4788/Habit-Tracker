@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { getAnalyticsOverview } from "@/services/analytics.service";
 import { listHabits } from "@/services/habit.service";
 import { getTodayLogs } from "@/services/tracking.service";
@@ -28,6 +29,9 @@ export default async function DashboardPage() {
       userName = session.user.name || "there";
     }
   }
+  // Defense in depth: the layout and middleware already guard this route, but
+  // querying with an empty userId would throw a cast error instead of redirecting.
+  if (!userId) redirect("/auth/login");
 
   const today = localDateString(new Date(), timezone);
   const [overview, habitsResult, todayLogs] = await Promise.all([

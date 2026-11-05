@@ -8,6 +8,7 @@ let registerRoute: typeof import("@/app/api/auth/register/route");
 let loginRoute: typeof import("@/app/api/auth/login/route");
 let meRoute: typeof import("@/app/api/auth/me/route");
 let habitsRoute: typeof import("@/app/api/habits/route");
+let habitIdRoute: typeof import("@/app/api/habits/[id]/route");
 let logsRoute: typeof import("@/app/api/habit-logs/route");
 let goalsRoute: typeof import("@/app/api/goals/route");
 let goalRoute: typeof import("@/app/api/goals/[id]/route");
@@ -30,6 +31,10 @@ let achievementsRoute: typeof import("@/app/api/achievements/route");
 let reportsRoute: typeof import("@/app/api/reports/route");
 let subscriptionRoute: typeof import("@/app/api/subscription/route");
 let aiRoute: typeof import("@/app/api/ai/coach/route");
+let cronRoute: typeof import("@/app/api/cron/reminders/route");
+let inboxRoute: typeof import("@/app/api/notifications/inbox/route");
+let inboxIdRoute: typeof import("@/app/api/notifications/inbox/[id]/route");
+let inboxReadAllRoute: typeof import("@/app/api/notifications/inbox/read-all/route");
 
 let ipSeq = 0;
 const PASSWORD = "Str0ng!Pass";
@@ -123,6 +128,7 @@ beforeAll(async () => {
   delete process.env.AI_API_KEY;
   delete process.env.VAPID_PUBLIC_KEY;
   delete process.env.VAPID_PRIVATE_KEY;
+  delete process.env.CRON_SECRET;
 
   replset = await MongoMemoryReplSet.create({
     replSet: { count: 1, storageEngine: "wiredTiger" },
@@ -137,6 +143,7 @@ beforeAll(async () => {
   loginRoute = await import("@/app/api/auth/login/route");
   meRoute = await import("@/app/api/auth/me/route");
   habitsRoute = await import("@/app/api/habits/route");
+  habitIdRoute = await import("@/app/api/habits/[id]/route");
   logsRoute = await import("@/app/api/habit-logs/route");
   goalsRoute = await import("@/app/api/goals/route");
   goalRoute = await import("@/app/api/goals/[id]/route");
@@ -159,6 +166,10 @@ beforeAll(async () => {
   reportsRoute = await import("@/app/api/reports/route");
   subscriptionRoute = await import("@/app/api/subscription/route");
   aiRoute = await import("@/app/api/ai/coach/route");
+  cronRoute = await import("@/app/api/cron/reminders/route");
+  inboxRoute = await import("@/app/api/notifications/inbox/route");
+  inboxIdRoute = await import("@/app/api/notifications/inbox/[id]/route");
+  inboxReadAllRoute = await import("@/app/api/notifications/inbox/read-all/route");
 
   const dbConnect = (await import("@/lib/database")).default;
   await dbConnect();
@@ -704,5 +715,139 @@ describe("feature API integration", () => {
     const adviceData = await advice.json();
     expect(adviceData.provider).toBe("local");
     expect(typeof adviceData.message).toBe("string");
+  });
+
+  it("gates the reminder cron and serves an in-app notification inbox", async () => {
+    // Without CRON_SECRET the cron fails closed with setup instructions.
+    const unconfigured = await cronRoute.POST(api("/api/cron/reminders", { method: "POST" }));
+    expect(unconfigured.status).toBe(503);
+    expect((await unconfigured.json()).error).toMatch(/CRON_SECRET/);
+
+    process.env.CRON_SECRET = "test-cron-secret";
+
+    const unauthorized = await cronRoute.POST(
+      api("/api/cron/reminders", {
+        method: "POST",
+        headers: { authorization: "Bearer wrong-secret" },
+      })
+    );
+    expect(unauthorized.status).toBe(401);
+
+    const { cookie } = await registerUser();
+    const stranger = await registerUser();
+
+    const hour = new Date().toISOString().slice(11, 13);
+    const habitRes = await habitsRoute.POST(
+      jsonRequest(
+        "/api/habits",
+        {
+          name: "Remind me daily",
+          frequency: "daily",
+          reminder: { enabled: true, time: `${hour}:00`, days: [] },
+        },
+        { cookie }
+      )
+    );
+    expect(habitRes.status).toBe(201);
+    const habit = await habitRes.json();
+
+    const runCron = async () => {
+      const res = await cronRoute.POST(
+        api("/api/cron/reminders", {
+          method: "POST",
+          headers: { authorization: "Bearer test-cron-secret" },
+        })
+      );
+      expect(res.status).toBe(200);
+      return res.json();
+    };
+
+    let cronBody = await runCron();
+    if (cronBody.created === 0) {
+      // The reminder hour may have rolled over between setup and execution.
+      const nextHour = new Date().toISOString().slice(11, 13);
+      const patched = await habitIdRoute.PATCH(
+        jsonRequest(
+          `/api/habits/${habit._id}`,
+          { reminder: { enabled: true, time: `${nextHour}:00`, days: [] } },
+          { cookie },
+          "PATCH"
+        ),
+        { params: { id: habit._id } }
+      );
+      expect(patched.status).toBe(200);
+      cronBody = await runCron();
+    }
+    expect(cronBody.created).toBeGreaterThanOrEqual(1);
+
+    // The inbox only ever shows the caller's own notifications.
+    const inboxRes = await inboxRoute.GET(
+      api("/api/notifications/inbox", { headers: { cookie } })
+    );
+    expect(inboxRes.status).toBe(200);
+    const inboxData = await inboxRes.json();
+    expect(inboxData.notifications.length).toBeGreaterThanOrEqual(1);
+    expect(inboxData.unreadCount).toBe(inboxData.notifications.length);
+    const first = inboxData.notifications[0];
+    expect(first.title).toContain("Remind me daily");
+
+    const strangerData = await (
+      await inboxRoute.GET(api("/api/notifications/inbox", { headers: { cookie: stranger.cookie } }))
+    ).json();
+    expect(strangerData.notifications).toHaveLength(0);
+    expect(strangerData.unreadCount).toBe(0);
+
+    const anon = await inboxRoute.GET(api("/api/notifications/inbox"));
+    expect(anon.status).toBe(401);
+
+    // A stranger cannot flip the owner's read state (IDOR).
+    const foreign = await inboxIdRoute.PATCH(
+      jsonRequest(
+        `/api/notifications/inbox/${first._id}`,
+        { read: true },
+        { cookie: stranger.cookie },
+        "PATCH"
+      ),
+      { params: { id: first._id } }
+    );
+    expect(foreign.status).toBe(404);
+
+    const badId = await inboxIdRoute.PATCH(
+      jsonRequest("/api/notifications/inbox/not-an-id", { read: true }, { cookie }, "PATCH"),
+      { params: { id: "not-an-id" } }
+    );
+    expect(badId.status).toBe(400);
+
+    // The owner marks one as read.
+    const markOne = await inboxIdRoute.PATCH(
+      jsonRequest(`/api/notifications/inbox/${first._id}`, { read: true }, { cookie }, "PATCH"),
+      { params: { id: first._id } }
+    );
+    expect(markOne.status).toBe(200);
+
+    const afterOne = await (
+      await inboxRoute.GET(api("/api/notifications/inbox", { headers: { cookie } }))
+    ).json();
+    expect(afterOne.unreadCount).toBe(inboxData.unreadCount - 1);
+
+    const unreadOnly = await (
+      await inboxRoute.GET(api("/api/notifications/inbox?unreadOnly=true", { headers: { cookie } }))
+    ).json();
+    expect(unreadOnly.notifications.some((n: any) => n._id === first._id)).toBe(false);
+
+    const readAll = await inboxReadAllRoute.POST(
+      api("/api/notifications/inbox/read-all", { method: "POST", headers: { cookie } })
+    );
+    expect(readAll.status).toBe(200);
+
+    const finalInbox = await (
+      await inboxRoute.GET(api("/api/notifications/inbox", { headers: { cookie } }))
+    ).json();
+    expect(finalInbox.unreadCount).toBe(0);
+
+    const badLimit = await inboxRoute.GET(
+      api("/api/notifications/inbox?limit=0", { headers: { cookie } })
+    );
+    expect(badLimit.status).toBe(400);
   });
 });
