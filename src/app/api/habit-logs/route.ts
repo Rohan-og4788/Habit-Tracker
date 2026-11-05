@@ -4,6 +4,22 @@ import { validateSession, readSessionCookie } from "@/lib/session";
 import { recordHabitLog, getHabitLogsForRange, getHabitLog, deleteHabitLog, getTodayLogs } from "@/services/tracking.service";
 import { recordLogSchema } from "@/lib/validations";
 import dbConnect from "@/lib/database";
+import { badRequest, notFound, serverError } from "@/lib/api";
+
+/**
+ * Map expected tracking-service errors to client responses. Without this,
+ * validation failures (future date, unscheduled day) would surface as 500s.
+ */
+function logWriteError(err: unknown) {
+  const message = err instanceof Error ? err.message : "";
+  if (/future date|not scheduled|invalid date/i.test(message)) {
+    return badRequest(message);
+  }
+  if (/not found/i.test(message)) {
+    return notFound(message);
+  }
+  return serverError(err, "Failed to save log.");
+}
 
 async function getUserId(req: Request): Promise<string | null> {
   const token = readSessionCookie(req);
@@ -42,8 +58,7 @@ export async function POST(req: Request) {
     const log = await recordHabitLog({ ...parsed.data, userId });
     return NextResponse.json(log, { status: 201 });
   } catch (err: any) {
-    console.error("Record log error:", err);
-    return NextResponse.json({ error: err.message || "Failed to record log." }, { status: 500 });
+    return logWriteError(err);
   }
 }
 
@@ -61,7 +76,6 @@ export async function DELETE(req: Request) {
     await deleteHabitLog(userId, habitId, localDate);
     return NextResponse.json({ message: "Log deleted." });
   } catch (err: any) {
-    console.error("Delete log error:", err);
-    return NextResponse.json({ error: err.message || "Failed to delete log." }, { status: 500 });
+    return logWriteError(err);
   }
 }

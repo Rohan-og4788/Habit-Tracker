@@ -40,8 +40,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const habit = await updateHabit(params.id, userId, body);
     return NextResponse.json(habit);
   } catch (err: any) {
-    console.error("Update habit error:", err);
     const status = err.message === "Habit not found" ? 404 : 500;
+    if (status === 500) console.error("Update habit error:", err);
     return NextResponse.json({ error: err.message || "Failed to update habit." }, { status });
   }
 }
@@ -56,8 +56,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     await deleteHabit(params.id, userId);
     return NextResponse.json({ message: "Habit deleted." });
   } catch (err: any) {
-    console.error("Delete habit error:", err);
     const status = err.message === "Habit not found" ? 404 : 500;
+    if (status === 500) console.error("Delete habit error:", err);
     return NextResponse.json({ error: err.message || "Failed to delete habit." }, { status });
   }
 }

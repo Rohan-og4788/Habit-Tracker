@@ -339,7 +339,7 @@ Type-specific payloads:
 
 Requires session. Deletes the log and recomputes habit aggregates.
 
-**200** — `{ "message": "Log deleted." }`.
+**200** - `{ "message": "Log deleted." }`. **404** if no log exists for that habit/date (including logs owned by another user).
 
 ### `GET /api/habit-logs/[id]?localDate=YYYY-MM-DD`
 

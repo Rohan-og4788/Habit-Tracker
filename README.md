@@ -274,11 +274,12 @@ See [`.env.example`](.env.example) for inline comments.
 npm test
 ```
 
-Current result: **37 tests across 3 files, all passing.**
+Current result: **45 tests across 4 files, all passing** (29 unit + 16 integration).
 
 - `tests/unit/streak.test.ts` — local-date validation, timezone conversion, DST-safe day bounds, scheduling rules, progress calculation.
 - `tests/unit/validations.test.ts` — Zod schemas for registration, login, habits, logs and journal.
 - `tests/integration/database.test.ts` — runs against a real, disposable MongoDB **replica set** (`mongodb-memory-server`). Covers habit creation with schedule versions, log upserts, the unique `{userId, habitId, localDate}` index, transaction commits, future/unscheduled-day rejection, cross-user isolation (IDOR), streak recomputation and analytics.
+- `tests/integration/api.test.ts` — exercises the real route handlers with real session/CSRF cookies: register, login, logout, `/api/auth/me`, unauthenticated 401s, the free-tier limit, log upsert/read/delete, `400` responses for future/unscheduled days, habit IDOR (`404` on GET/PATCH/DELETE), and analytics.
 
 Run only one layer when iterating:
 

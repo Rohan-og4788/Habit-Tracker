@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { validateSession, readSessionCookie } from "@/lib/session";
-import { createHabit, listHabits, type ListHabitsFilters } from "@/services/habit.service";
+import {
+  createHabit,
+  listHabits,
+  getActiveHabitCount,
+  type ListHabitsFilters,
+} from "@/services/habit.service";
 import { createHabitSchema } from "@/lib/validations";
+import { Subscription } from "@/models/Subscription";
 import dbConnect from "@/lib/database";
 
 async function getUserId(req: Request): Promise<string | null> {
@@ -59,10 +65,9 @@ export async function POST(req: Request) {
     }
 
     // Enforce free-tier active habit limit unless pro
-    const activeCount = await (require("@/services/habit.service").getActiveHabitCount)(userId);
+    const activeCount = await getActiveHabitCount(userId);
     if (activeCount >= 5) {
       // Check subscription pro status
-      const { Subscription } = require("@/models/Subscription");
       const sub = await Subscription.findOne({ userId }).lean();
       const isPro = sub && sub.plan === "pro" && sub.status === "active";
       if (!isPro) {
