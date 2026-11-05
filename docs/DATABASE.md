@@ -512,8 +512,8 @@ Sessions and verification tokens also expire automatically via MongoDB TTL index
 
 `scripts/seed.mjs` creates a demo account with:
 
-- 5 habits (duration, numeric, count, negative, boolean)
-- ~30 days of realistic habit logs
+- 5 habits (duration, numeric, count, negative, boolean) plus their initial schedule versions
+- ~30 days of realistic habit logs (121 on the first run)
 - 2 goals, 5 journal entries, 8 focus sessions
 - 2 daily tasks, notification preferences, user settings, a free subscription
 
@@ -522,6 +522,8 @@ It is idempotent for the demo email: it deletes the previous demo data and recre
 ```bash
 npm run seed
 ```
+
+The seeder is exercised end-to-end by `tests/integration/seed.test.ts`: it runs the script as a real child process against an in-memory replica set, then signs in as the demo account through the API and reads back the seeded habits, logs, analytics and focus sessions, and finally re-runs the script to prove idempotency.
 
 ---
 

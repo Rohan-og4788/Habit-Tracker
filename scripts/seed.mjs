@@ -42,8 +42,6 @@ async function main() {
       "verificationtokens",
       "habits",
       "habitlogs",
-      "habitschedulevarsions",
-      "habitschedulevarsions",
       "habitscheduleversions",
       "goals",
       "challenges",
@@ -169,6 +167,22 @@ async function main() {
   const habitResult = await db.collection("habits").insertMany(habitDocs);
   const habitIds = Object.values(habitResult.insertedIds);
 
+  // Mirror createHabit: every habit gets its initial schedule version.
+  await db.collection("habitscheduleversions").insertMany(
+    habitIds.map((habitId, index) => ({
+      habitId,
+      userId,
+      effectiveFrom: habitDefinitions[index].startDate ?? startDate,
+      frequency: habitDefinitions[index].frequency,
+      weekdays: habitDefinitions[index].weekdays,
+      intervalDays: null,
+      startDate,
+      endDate: null,
+      createdAt: startDate,
+      updatedAt: startDate,
+    }))
+  );
+
   const logDocs = [];
   for (let offset = 29; offset >= 0; offset--) {
     const day = addDays(now, -offset);
@@ -269,12 +283,11 @@ async function main() {
       return {
         userId,
         habitId: habitIds[4],
-        durationMinutes: 25,
+        plannedMinutes: 25,
         actualMinutes: 25,
         startedAt: day,
         endedAt: new Date(day.getTime() + 25 * 60 * 1000),
         completed: true,
-        notes: "",
         createdAt: day,
         updatedAt: day,
       };
