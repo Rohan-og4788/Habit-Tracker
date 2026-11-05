@@ -2,7 +2,7 @@
 
 HabitForge is a production-ready habit-tracking SaaS built with Next.js 14 (App Router), TypeScript, MongoDB/Mongoose, Tailwind CSS and shadcn-style UI components. It replaces the original static `localStorage` prototype with real authentication, a database-backed API, per-user authorization and working implementations of every advertised feature.
 
-> **Current status:** the codebase builds cleanly and all unit tests pass. Running the app requires a MongoDB connection string (see [Quick start](#quick-start)). External integrations (email, push, AI, Stripe) are optional and fail closed with explicit setup messages when their credentials are absent — they never fake success.
+> **Current status:** the codebase builds cleanly and all unit, integration and public e2e tests pass. Running the app requires a MongoDB connection string (see [Quick start](#quick-start)). External integrations (email, push, AI, Stripe) are optional and fail closed with explicit setup messages when their credentials are absent — they never fake success.
 
 ---
 
@@ -91,7 +91,7 @@ All of the following are backed by real database reads/writes and are scoped to 
 | Charts | Recharts |
 | Validation | Zod |
 | Email | Resend (optional) |
-| Tests | Vitest (unit), Playwright (e2e) |
+| Tests | Vitest (unit + MongoDB integration), Playwright (e2e) |
 
 ---
 
@@ -181,6 +181,7 @@ See [`.env.example`](.env.example) for inline comments.
 │   └── seed.mjs                  # Idempotent demo-data seeder
 ├── tests/
 │   ├── unit/                     # Vitest: streak/timezone + validation
+│   ├── integration/              # Vitest + in-memory MongoDB replica set
 │   └── e2e/                      # Playwright: public + auth flows
 ├── docs/
 │   ├── DATABASE.md
@@ -257,7 +258,9 @@ See [`.env.example`](.env.example) for inline comments.
 | `npm run lint` | Next.js ESLint. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm run seed` | Seed the demo account and sample data. |
-| `npm test` | Run Vitest unit tests. |
+| `npm test` | Run Vitest unit + integration tests. |
+| `npm run test:unit` | Unit tests only (no database). |
+| `npm run test:integration` | Integration tests against an in-memory MongoDB replica set. |
 | `npm run test:watch` | Vitest in watch mode. |
 | `npm run test:e2e` | Run Playwright e2e tests. |
 
@@ -271,10 +274,20 @@ See [`.env.example`](.env.example) for inline comments.
 npm test
 ```
 
-Current result: **29 tests across 2 files, all passing.**
+Current result: **37 tests across 3 files, all passing.**
 
 - `tests/unit/streak.test.ts` — local-date validation, timezone conversion, DST-safe day bounds, scheduling rules, progress calculation.
 - `tests/unit/validations.test.ts` — Zod schemas for registration, login, habits, logs and journal.
+- `tests/integration/database.test.ts` — runs against a real, disposable MongoDB **replica set** (`mongodb-memory-server`). Covers habit creation with schedule versions, log upserts, the unique `{userId, habitId, localDate}` index, transaction commits, future/unscheduled-day rejection, cross-user isolation (IDOR), streak recomputation and analytics.
+
+Run only one layer when iterating:
+
+```bash
+npm run test:unit          # fast, no database
+npm run test:integration   # spins up an in-memory replica set
+```
+
+The first integration run downloads a MongoDB binary (cached afterwards by `mongodb-memory-server`); no external database or credentials are needed.
 
 E2E (public pages and 404) runs against a dev server:
 
@@ -326,7 +339,7 @@ Current result: **6 passed, 1 skipped** (the authenticated flow is skipped unles
 ## Known limitations
 
 - **MongoDB is required.** The app cannot run without `MONGODB_URI`; there is no in-memory or file fallback.
-- **No live database was exercised in the development sandbox** used to build this repo (no credentials were available). The schema, services and routes are covered by type-checking, unit tests and a production build, but a smoke test against a real database is recommended after deployment.
+- **No production database was available in the development sandbox.** The data layer is covered by an integration suite that runs against a real in-memory MongoDB replica set (transactions, indexes, isolation, streaks, analytics), but a smoke test against your deployed MongoDB is still recommended after deployment.
 - **Stripe checkout is not wired to the Stripe SDK.** Billing endpoints return explicit `501`/`503` messages rather than creating fake subscriptions. The free tier is fully functional.
 - **Email delivery requires Resend.** Verification/reset tokens are created regardless, but users cannot receive the link until email is configured.
 - **Rate limiting is in-memory.** For multi-instance/serverless deployments, replace `src/lib/rate-limit.ts` with a Redis-backed limiter.
