@@ -97,35 +97,74 @@ All of the following are backed by real database reads/writes and are scoped to 
 
 ## Quick start
 
-### Prerequisites
-- Node.js 20+ (Node 20 LTS recommended)
-- A MongoDB database (Atlas free tier works) or a local `mongod`
+### 1. Prerequisites
 
-### Install and run
+- Node.js 20 or newer (Node 20 LTS recommended)
+- npm 10 or newer
+- A MongoDB database: [MongoDB Atlas](https://www.mongodb.com/atlas) works, or run MongoDB locally
+
+### 2. Clone and install
 
 ```bash
-# 1. Install dependencies
+git clone https://github.com/Rohan-og4788/Habit-Tracker.git
+cd Habit-Tracker
 npm install
+```
 
-# 2. Create your env file
+### 3. Configure the environment
+
+Create `.env` from the example file.
+
+**Windows PowerShell**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**macOS / Linux**
+
+```bash
 cp .env.example .env
-# then edit .env and set MONGODB_URI and AUTH_SECRET
+```
 
-# 3. (Optional) seed a demo account and sample data
-npm run seed
+Open `.env` and set at least:
 
-# 4. Start the dev server
+```env
+MONGODB_URI=<your MongoDB connection string>
+AUTH_SECRET=<a long random secret>
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+You can generate a secret with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+The remaining integrations are optional for local development. See [Environment variables](#environment-variables) for details.
+
+### 4. Start the app
+
+```bash
 npm run dev
 ```
 
 Open <http://localhost:3000>.
 
-If you ran the seed script, sign in at `/auth/login` with:
+### Optional: add demo data
+
+After configuring a working MongoDB connection, you can seed a demo account and sample data:
+
+```bash
+npm run seed
+```
+
+Then sign in at `/auth/login` with:
 
 - **Email:** `demo@habitforge.app`
 - **Password:** `Demo1234!`
 
-(Override with `SEED_EMAIL` / `SEED_PASSWORD` before seeding.)
+Set `SEED_EMAIL` and `SEED_PASSWORD` before running the seeder to use different demo credentials. The seeder deletes and recreates the demo account each time; use it only with a development database.
 
 ### Production build
 
